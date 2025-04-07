@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Logitech Live Feed</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+</head>
+<body>
+    <h1>Live Camera Feed</h1>
+    <img src="{{ url_for('video_feed') }}" alt="Live Feed">
+
+    <div>
+		<button onclick="fetch('/start_recording')">Start Recording</button>
+		<button onclick="fetch('/stop_recording')">Stop & Send</button>
+    </div>
+</body>
+</html>
