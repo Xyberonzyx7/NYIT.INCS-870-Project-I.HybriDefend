@@ -18,7 +18,30 @@ def capture_frames():
     while recording:
         success, frame = cap.read()
         if success:
-            frames.append(frame)
+            frames.append(add_timestamp(frame))
+
+def add_timestamp(frame):
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    height, width, _ = frame.shape
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    font_color = (255, 255, 255)
+    thickness = 2
+    text_size, _ = cv2.getTextSize(timestamp, font, font_scale, thickness)
+    text_x = width - text_size[0] - 10
+    text_y = height - 10
+
+    # Background rectangle
+    cv2.rectangle(frame,
+                  (text_x - 5, text_y - text_size[1] - 5),
+                  (text_x + text_size[0] + 5, text_y + 5),
+                  (0, 0, 0), -1)
+
+    # Timestamp text
+    cv2.putText(frame, timestamp, (text_x, text_y), font, font_scale, font_color, thickness)
+    return frame
 
 @app.route('/')
 def index():
@@ -31,6 +54,7 @@ def video_feed():
         while True:
             success, frame = cap.read()
             if not success: break
+            frame = add_timestamp(frame)
             ret, buffer = cv2.imencode('.jpg', frame)
             yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
