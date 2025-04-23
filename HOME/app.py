@@ -6,6 +6,16 @@ import hashlib
 import sys
 sys.path.append('..')  # go up to project root
 from secret import SECRET_KEY, IV_HEX
+from tensorflow.keras.models import load_model
+import numpy as np
+
+# Load your trained model
+model = load_model('best_model.keras')
+
+# Define the expected clip length and target frame size
+CLIP_LENGTH = 30
+TARGET_SIZE = (256, 256)  # Must match training IMAGE_HEIGHT and IMAGE_WIDTH
+clip_buffer = []
 
 app = Flask(__name__)
 
@@ -23,7 +33,6 @@ def capture_frames():
 def add_timestamp(frame):
     from datetime import datetime
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
     height, width, _ = frame.shape
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.6
@@ -38,7 +47,6 @@ def add_timestamp(frame):
                   (text_x - 5, text_y - text_size[1] - 5),
                   (text_x + text_size[0] + 5, text_y + 5),
                   (0, 0, 0), -1)
-
     # Timestamp text
     cv2.putText(frame, timestamp, (text_x, text_y), font, font_scale, font_color, thickness)
     return frame
@@ -50,13 +58,45 @@ def index():
 @app.route('/video_feed')
 def video_feed():
     def gen_frames():
-        global cap
+        global cap, clip_buffer
         while True:
             success, frame = cap.read()
-            if not success: break
+            if not success:
+                break
+
+            # Add timestamp to the frame
             frame = add_timestamp(frame)
+
+            # Resize frame to match model input
+            resized_frame = cv2.resize(frame, TARGET_SIZE)
+            # Use the resized frame directly (training used unnormalized frames)
+            clip_buffer.append(resized_frame)
+            if len(clip_buffer) > CLIP_LENGTH:
+                clip_buffer.pop(0)
+
+            prediction_text = ""
+            if len(clip_buffer) == CLIP_LENGTH:
+                # Prepare input with shape: (1, CLIP_LENGTH, height, width, channels)
+                clip_array = np.array(clip_buffer)
+                clip_array = np.expand_dims(clip_array, axis=0)
+                
+                # Run model prediction
+                prediction = model.predict(clip_array)
+                class_idx = np.argmax(prediction[0])
+                confidence = prediction[0][class_idx]
+                # Map index to class name
+                CLASS_LIST = ["normal", "shooting"]
+                predicted_class = CLASS_LIST[class_idx]
+                prediction_text = f"{predicted_class} ({confidence*100:.1f}%)"
+
+            # Overlay prediction text on the frame
+            if prediction_text:
+                cv2.putText(frame, prediction_text, (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
             ret, buffer = cv2.imencode('.jpg', frame)
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/start_recording')
@@ -100,7 +140,6 @@ def stop_recording():
 
     frames.clear()
     return "Recording stopped, encrypted locally, and sent to cloud."
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
