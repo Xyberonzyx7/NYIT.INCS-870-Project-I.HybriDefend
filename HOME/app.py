@@ -51,6 +51,37 @@ def add_timestamp(frame):
     cv2.putText(frame, timestamp, (text_x, text_y), font, font_scale, font_color, thickness)
     return frame
 
+def anomaly_detection(frame):
+    # Resize frame to match model input
+    resized_frame = cv2.resize(frame, TARGET_SIZE)
+    # Use the resized frame directly (training used unnormalized frames)
+    clip_buffer.append(resized_frame)
+    if len(clip_buffer) > CLIP_LENGTH:
+        clip_buffer.pop(0)
+
+    prediction_text = ""
+    if len(clip_buffer) == CLIP_LENGTH:
+        # Prepare input with shape: (1, CLIP_LENGTH, height, width, channels)
+        clip_array = np.array(clip_buffer)
+        clip_array = np.expand_dims(clip_array, axis=0)
+                
+        # Run model prediction
+        prediction = model.predict(clip_array)
+        class_idx = np.argmax(prediction[0])
+        confidence = prediction[0][class_idx]
+        # Map index to class name
+        CLASS_LIST = ["normal", "shooting"]
+        predicted_class = CLASS_LIST[class_idx]
+        prediction_text = f"{predicted_class} ({confidence*100:.1f}%)"
+
+    # Overlay prediction text on the frame
+    if prediction_text:
+        cv2.putText(frame, prediction_text, (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+    return frame
+
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -67,36 +98,13 @@ def video_feed():
             # Add timestamp to the frame
             frame = add_timestamp(frame)
 
-            # Resize frame to match model input
-            resized_frame = cv2.resize(frame, TARGET_SIZE)
-            # Use the resized frame directly (training used unnormalized frames)
-            clip_buffer.append(resized_frame)
-            if len(clip_buffer) > CLIP_LENGTH:
-                clip_buffer.pop(0)
-
-            prediction_text = ""
-            if len(clip_buffer) == CLIP_LENGTH:
-                # Prepare input with shape: (1, CLIP_LENGTH, height, width, channels)
-                clip_array = np.array(clip_buffer)
-                clip_array = np.expand_dims(clip_array, axis=0)
-                
-                # Run model prediction
-                prediction = model.predict(clip_array)
-                class_idx = np.argmax(prediction[0])
-                confidence = prediction[0][class_idx]
-                # Map index to class name
-                CLASS_LIST = ["normal", "shooting"]
-                predicted_class = CLASS_LIST[class_idx]
-                prediction_text = f"{predicted_class} ({confidence*100:.1f}%)"
-
-            # Overlay prediction text on the frame
-            if prediction_text:
-                cv2.putText(frame, prediction_text, (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            # anomaly detection
+            frame = anomaly_detection(frame)
 
             ret, buffer = cv2.imencode('.jpg', frame)
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/start_recording')
