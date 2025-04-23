@@ -3,3 +3,4 @@ encrypted_video.bin
 recorded.avi
 CLOUD/uploads/
 __pycache__/
+venv*/
