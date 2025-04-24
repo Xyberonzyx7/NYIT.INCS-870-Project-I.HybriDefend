@@ -9,10 +9,14 @@ from secret import SECRET_KEY, IV_HEX
 from tensorflow.keras.models import load_model
 import numpy as np
 import queue
+
+
 from hydf_face_recognition.face import identify_face
+from hydf_object_detection.object import identify_object
 
 # Load your trained model
 model = load_model('best_model.keras')
+
 
 # Define the expected clip length and target frame size
 CLIP_LENGTH = 30
@@ -104,8 +108,6 @@ def video_feed():
             frame = add_timestamp(frame)
 
             # # anomaly detection
-            # frame = anomaly_detection(frame)
-
             # Face recognition
             if frame_count % face_process_interval == 0:
                 # copy so the background thread sees the right image
@@ -117,6 +119,9 @@ def video_feed():
             if current_name:
                 # print(current_name)
                 cv2.putText(frame, f"Name: {current_name}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            # # object detection
+            frame = identify_object(frame)
 
             frame_count += 1
 

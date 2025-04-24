@@ -6,3 +6,11 @@ __pycache__/
 venv*/
 HOME/hydf_face_recognition/faces/
 HOME/known_faces.json
+HOME/hydf_object_detection/box/
+HOME/hydf_object_detection/gun/
+HOME/hydf_object_detection/face/
+HOME/hydf_object_detection/face_half_covered/
+HOME/hydf_object_detection/face_fully_covered/
+HOME/hydf_object_detection/labels_my-project-name_2025-04-23-08-25-16/
+HOME/hydf_object_detection/mix/
+TOOLS/
