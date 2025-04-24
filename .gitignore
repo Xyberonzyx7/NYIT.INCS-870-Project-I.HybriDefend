@@ -4,3 +4,5 @@ recorded.avi
 CLOUD/uploads/
 __pycache__/
 venv*/
+HOME/hydf_face_recognition/faces/
+HOME/known_faces.json

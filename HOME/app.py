@@ -8,6 +8,8 @@ sys.path.append('..')  # go up to project root
 from secret import SECRET_KEY, IV_HEX
 from tensorflow.keras.models import load_model
 import numpy as np
+import queue
+from hydf_face_recognition.face import identify_face
 
 # Load your trained model
 model = load_model('best_model.keras')
@@ -22,6 +24,8 @@ app = Flask(__name__)
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 recording = False
 frames = []
+frame_queue = queue.Queue(maxsize=1)  # Queue to hold frames for recognition
+current_name = ""  # The name identified by the recognition thread
 
 def capture_frames():
     global frames, recording, cap
@@ -80,15 +84,16 @@ def anomaly_detection(frame):
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
     return frame
 
-
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/video_feed')
 def video_feed():
+
     def gen_frames():
+        frame_count = 0
+        face_process_interval = 30
         global cap, clip_buffer
         while True:
             success, frame = cap.read()
@@ -98,8 +103,22 @@ def video_feed():
             # Add timestamp to the frame
             frame = add_timestamp(frame)
 
-            # anomaly detection
-            frame = anomaly_detection(frame)
+            # # anomaly detection
+            # frame = anomaly_detection(frame)
+
+            # Face recognition
+            if frame_count % face_process_interval == 0:
+                # copy so the background thread sees the right image
+                try:
+                    frame_queue.put_nowait(frame.copy())
+                except queue.Full:
+                    pass
+
+            if current_name:
+                # print(current_name)
+                cv2.putText(frame, f"Name: {current_name}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            frame_count += 1
 
             ret, buffer = cv2.imencode('.jpg', frame)
             yield (b'--frame\r\n'
@@ -149,5 +168,38 @@ def stop_recording():
     frames.clear()
     return "Recording stopped, encrypted locally, and sent to cloud."
 
+
+"""
+Face Recognition Functions
+Face Recognition Functions
+Face Recognition Functions
+"""
+def recognition_worker():
+    """
+    The recognition thread. Pulls frames from the queue and processes them.
+    """
+    global current_name
+    while True:
+        try:
+            # Get the most recent frame
+            frame = frame_queue.get(timeout=20)
+            # Run face recognition
+            name = identify_face(frame)
+            current_name = name if name else "Unknown"
+        except queue.Empty:
+            continue
+
+"""
+Main Function
+Main Function
+Main Function
+"""
+
 if __name__ == '__main__':
+
+    # Start the recognition thread before running the app
+    recognition_thread = threading.Thread(target=recognition_worker)
+    recognition_thread.daemon = True
+    recognition_thread.start()
+
     app.run(host='0.0.0.0', port=5000)
