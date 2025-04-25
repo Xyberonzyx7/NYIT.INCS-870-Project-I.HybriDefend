@@ -7,6 +7,7 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            background-color: #f4f4f4;
         }
         h1 {
             margin-top: 20px;
@@ -23,6 +24,34 @@
         button {
             margin: 5px;
             padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #risk-container {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #risk-score {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #risk-meter {
+            width: 300px;
+            height: 30px;
+            border: 2px solid #555;
+            background-color: lightgray;
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        #risk-fill {
+            height: 100%;
+            width: 0%;
+            background-color: green;
+            transition: width 0.5s ease, background-color 0.5s ease;
         }
     </style>
 </head>
@@ -42,10 +71,17 @@
     <button onclick="fetch('/stop_recording')">Stop & Send</button>
 </div>
 
+<div id="risk-container">
+    <div id="risk-score">Risk: 0</div>
+    <div id="risk-meter">
+        <div id="risk-fill"></div>
+    </div>
+</div>
+
 <script>
     function setStream(type) {
         const stream = document.getElementById("stream");
-        const timestamp = new Date().getTime();  // 💡 cache buster
+        const timestamp = new Date().getTime(); // cache buster
 
         if (type === 'live') {
             stream.src = `/video_feed?t=${timestamp}`;
@@ -53,8 +89,37 @@
             stream.src = `/video_file/${type}?t=${timestamp}`;
         }
     }
-</script>
 
+    async function updateRisk() {
+        try {
+            const response = await fetch('/risk_score');
+            const data = await response.json();
+            const risk = data.risk;
+
+            const scoreText = document.getElementById('risk-score');
+            const fillBar = document.getElementById('risk-fill');
+
+            // Update number
+            scoreText.innerText = `Risk: ${risk}`;
+
+            // Update meter width
+            fillBar.style.width = `${risk}%`;
+
+            // Change color based on level
+            if (risk <= 50) {
+                fillBar.style.backgroundColor = 'green';
+            } else if (risk <= 85) {
+                fillBar.style.backgroundColor = 'orange';
+            } else {
+                fillBar.style.backgroundColor = 'red';
+            }
+        } catch (err) {
+            console.error('Risk update failed', err);
+        }
+    }
+
+    setInterval(updateRisk, 1000); // update every second
+</script>
 
 </body>
 </html>

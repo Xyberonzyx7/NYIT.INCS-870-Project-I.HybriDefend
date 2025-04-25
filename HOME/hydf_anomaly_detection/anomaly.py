@@ -12,6 +12,9 @@ SMOOTH_KERNEL = 5
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 
+def get_normal_behavior():
+    return ['walk', 'enter']
+
 class AnomalyDetector:
     def __init__(self):
         self.model = YOLO(module_dir + '/yolov8n.pt')

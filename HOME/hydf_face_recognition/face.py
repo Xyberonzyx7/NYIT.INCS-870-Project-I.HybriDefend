@@ -6,6 +6,12 @@ import numpy as np
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 
+names = ['David', 'Kevin']
+
+def get_name_label():
+    return names
+
+
 def load_encodings_from_folder(name, folder_path):
     """
     Loads all encodings from a folder containing images of a single person.
@@ -82,12 +88,12 @@ def identify_face(input_data=None, input_path=None):
                 distance = distances[best_match_index]
 
                 if distance < 0.4:
-                    result = f"Match found: {name})"
+                    result = f"{name}"
                 else:
                     result = "Not recognized"
             else:
                 result = "Not recognized"
-    print(result)
+    # print(result)
     return result
 
 if __name__ == "__main__":
