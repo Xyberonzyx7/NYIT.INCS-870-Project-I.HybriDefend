@@ -2,16 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Logitech Live Feed</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <title>Smart Door Camera</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 20px;
+        }
+        #stream {
+            margin-top: 20px;
+            width: 640px;
+            height: 480px;
+            border: 2px solid #444;
+        }
+        .buttons {
+            margin-top: 20px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Live Camera Feed</h1>
-    <img src="{{ url_for('video_feed') }}" alt="Live Feed">
 
-    <div>
-		<button onclick="fetch('/start_recording')">Start Recording</button>
-		<button onclick="fetch('/stop_recording')">Stop & Send</button>
-    </div>
+<h1>Smart Door Surveillance</h1>
+
+<img id="stream" src="/video_feed" alt="Video Stream">
+
+<div class="buttons">
+    <button onclick="setStream('live')">Live Stream</button>
+    <button onclick="setStream('walk')">Walk Video</button>
+    <button onclick="setStream('entry')">Entry Video</button>
+    <button onclick="setStream('deliver')">Deliver Video</button>
+    <br>
+    <button onclick="fetch('/start_recording')">Start Recording</button>
+    <button onclick="fetch('/stop_recording')">Stop & Send</button>
+</div>
+
+<script>
+    function setStream(type) {
+        const stream = document.getElementById("stream");
+        const timestamp = new Date().getTime();  // 💡 cache buster
+
+        if (type === 'live') {
+            stream.src = `/video_feed?t=${timestamp}`;
+        } else {
+            stream.src = `/video_file/${type}?t=${timestamp}`;
+        }
+    }
+</script>
+
+
 </body>
 </html>
