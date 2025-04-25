@@ -8,7 +8,7 @@ yolo_model = YOLO(module_dir + '/best.pt')
 
 def identify_object(frame):
     # object detection
-    results = yolo_model(frame, imgsz=640, conf=0.70)[0]
+    results = yolo_model(frame, imgsz=640, conf=0.70, verbose=False)[0]
 
     # Draw all detected boxes + labels onto the frame
     frame = results.plot()

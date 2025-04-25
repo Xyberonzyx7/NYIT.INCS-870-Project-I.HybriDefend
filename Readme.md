@@ -26,6 +26,8 @@
 	- pip install numpy
 	- pip install pillow
 	- pip install ultralytics
+	- pip install opencv-python ultralytics numpy
+
 
 
 	#### Files

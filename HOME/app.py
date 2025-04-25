@@ -9,18 +9,20 @@ from secret import SECRET_KEY, IV_HEX
 from tensorflow.keras.models import load_model
 import numpy as np
 import queue
+from collections import deque, Counter
+import threading, time
 
 
 from hydf_face_recognition.face import identify_face
 from hydf_object_detection.object import identify_object
+from hydf_anomaly_detection.anomaly import AnomalyDetector
 
-# Load your trained model
-model = load_model('best_model.keras')
+# configure once at startup
+anom_detector = AnomalyDetector(
+    face_cls=2,
+    parcel_cls=0,
+)
 
-
-# Define the expected clip length and target frame size
-CLIP_LENGTH = 30
-TARGET_SIZE = (256, 256)  # Must match training IMAGE_HEIGHT and IMAGE_WIDTH
 clip_buffer = []
 
 app = Flask(__name__)
@@ -59,35 +61,6 @@ def add_timestamp(frame):
     cv2.putText(frame, timestamp, (text_x, text_y), font, font_scale, font_color, thickness)
     return frame
 
-def anomaly_detection(frame):
-    # Resize frame to match model input
-    resized_frame = cv2.resize(frame, TARGET_SIZE)
-    # Use the resized frame directly (training used unnormalized frames)
-    clip_buffer.append(resized_frame)
-    if len(clip_buffer) > CLIP_LENGTH:
-        clip_buffer.pop(0)
-
-    prediction_text = ""
-    if len(clip_buffer) == CLIP_LENGTH:
-        # Prepare input with shape: (1, CLIP_LENGTH, height, width, channels)
-        clip_array = np.array(clip_buffer)
-        clip_array = np.expand_dims(clip_array, axis=0)
-                
-        # Run model prediction
-        prediction = model.predict(clip_array)
-        class_idx = np.argmax(prediction[0])
-        confidence = prediction[0][class_idx]
-        # Map index to class name
-        CLASS_LIST = ["normal", "shooting"]
-        predicted_class = CLASS_LIST[class_idx]
-        prediction_text = f"{predicted_class} ({confidence*100:.1f}%)"
-
-    # Overlay prediction text on the frame
-    if prediction_text:
-        cv2.putText(frame, prediction_text, (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-    return frame
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -104,10 +77,7 @@ def video_feed():
             if not success:
                 break
 
-            # Add timestamp to the frame
-            frame = add_timestamp(frame)
 
-            # # anomaly detection
             # Face recognition
             if frame_count % face_process_interval == 0:
                 # copy so the background thread sees the right image
@@ -116,12 +86,38 @@ def video_feed():
                 except queue.Full:
                     pass
 
+            
+            # append the incoming frame to the shared buffer
+            with anom_lock:
+                anom_buffer.append(frame.copy())
+
+
+            # # object detection + draw object
+            frame = identify_object(frame)
+
+            # immediately overlay the last known majority label
+            cv2.putText(
+                frame,
+                f"Behavior: {anomaly_label.upper()}",
+                (10, 100),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 0, 255),
+                2
+            )
+
+            # draw the last computed label:
+            cv2.putText(frame,
+                        f"Behavior: {anomaly_label.upper()}",
+                        (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255), 2)
+
+            # draw name
             if current_name:
                 # print(current_name)
                 cv2.putText(frame, f"Name: {current_name}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            
-            # # object detection
-            frame = identify_object(frame)
+
+            # draw timestamp
+            frame = add_timestamp(frame)
 
             frame_count += 1
 
@@ -173,6 +169,18 @@ def stop_recording():
     frames.clear()
     return "Recording stopped, encrypted locally, and sent to cloud."
 
+@app.route('/video_walk')
+def video_walk():
+    return send_file('test_walk.mp4', mimetype='video/mp4')
+
+@app.route('/video_entry')
+def video_entry():
+    return send_file('test_entry.mp4', mimetype='video/mp4')
+
+@app.route('/video_deliver')
+def video_deliver():
+    return send_file('test_deliver.mp4', mimetype='video/mp4')
+
 
 """
 Face Recognition Functions
@@ -195,6 +203,41 @@ def recognition_worker():
             continue
 
 """
+Anomaly Detection Functions
+Anomaly Detection Functions
+Anomaly Detection Functions
+"""
+
+# ——— Configuration ———
+WINDOW_SIZE     = 100   # how many frames in each window
+VOTE_SIZE       = 1    # how many window‐labels to keep for voting
+DETECT_INTERVAL = 0.1  # seconds between worker runs
+
+# ——— Shared state ———
+anom_buffer   = deque(maxlen=WINDOW_SIZE)
+votes         = deque(maxlen=VOTE_SIZE)
+anomaly_label = '…'
+anom_lock     = threading.Lock()
+
+def anomaly_worker():
+    global anomaly_label
+    while True:
+        # 1) copy and clear buffer under lock
+        with anom_lock:
+            buf = list(anom_buffer)
+
+        # 2) if we have a full window, classify it
+        if len(buf) == WINDOW_SIZE:
+            label = anom_detector.detect(buf)
+            # votes.append(label)
+
+            # 3) compute the majority vote
+            # majority = Counter(votes).most_common(1)[0][0]
+            anomaly_label = label
+
+        time.sleep(DETECT_INTERVAL)
+
+"""
 Main Function
 Main Function
 Main Function
@@ -206,5 +249,10 @@ if __name__ == '__main__':
     recognition_thread = threading.Thread(target=recognition_worker)
     recognition_thread.daemon = True
     recognition_thread.start()
+
+    # anomaly detection thread
+    threading.Thread(target=anomaly_worker, daemon=True).start()
+
+
 
     app.run(host='0.0.0.0', port=5000)
