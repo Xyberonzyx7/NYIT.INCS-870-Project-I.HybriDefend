@@ -51,6 +51,10 @@ LOG_FOLDER = "static/logs"      # ⭐ New: logs folder
 
 anom_detector = AnomalyDetector()
 
+recent_frames = deque(maxlen=20)  # ⭐ Keep last 10 frames
+last_alert_time = 0
+ALERT_COOLDOWN = 30  # seconds (don't send too many emails)
+
 if not os.path.exists(LOG_FOLDER):
     os.makedirs(LOG_FOLDER)
 
@@ -101,20 +105,20 @@ def calculate_risk_score(name_label, object_labels, behavior_label):
 
     risk_score = 0
     if name_label not in names:
-        risk_score += 25
+        risk_score += 30
 
     for object_label in object_labels:
         if object_label == 'box':
             risk_score += 5
         elif object_label == 'gun':
-            risk_score += 40
+            risk_score += 50
         elif object_label == 'face_half_covered':
-            risk_score += 10
+            risk_score += 30
         elif object_label == 'face_fully_covered':
-            risk_score += 20
+            risk_score += 40
 
     if behavior_label not in normal_behaviors:
-        risk_score += 10
+        risk_score += 5
 
     return min(risk_score, 100)
 
@@ -312,11 +316,40 @@ def process_frame(frame, frame_count):
 
     current_risk_score = calculate_risk_score(current_name, list(object_labels), anomaly_label)
 
+
     frame = obj_result.plot()
     cv2.putText(frame, f"Behavior: {anomaly_label.upper()}", (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     if current_name:
         cv2.putText(frame, f"Name: {current_name}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    return add_timestamp(frame)
+    frame = add_timestamp(frame)
+
+    # Add frame to recent history
+    recent_frames.append(frame.copy())
+
+    now = time.time()
+    global last_alert_time
+
+    if 50 < current_risk_score <= 85 and now - last_alert_time > ALERT_COOLDOWN:
+        print("🚨 Medium Risk: Sending alert email...")
+        send_alert_email(
+            subject="Smart Door Alert: Medium Risk Detected",
+            body=f"A medium risk was detected at {datetime.datetime.now()}. Please review the attached frames.",
+            frames=list(recent_frames)[-15::5][-3:],
+
+            risk_level="medium"
+        )
+        last_alert_time = now
+
+    if current_risk_score > 85 and now - last_alert_time > ALERT_COOLDOWN:
+        print("🚨 High Risk: Sending action required email...")
+        send_alert_email(
+            subject="Smart Door Alert: HIGH Risk Detected!",
+            body=f"A HIGH risk was detected at {datetime.datetime.now()}. Immediate attention needed.",
+            frames=list(recent_frames)[-15::5][-3:],
+            risk_level="high"
+        )
+        last_alert_time = now
+    return frame
 
 def capture_frames():
     global frames, recording, cap
@@ -389,6 +422,65 @@ def verify_otp():
     del otp_store[email]
     app.config['DOOR_STATE'] = 'open'
     return 'OTP verified! Door is now open.'
+
+def send_alert_email(subject, body, frames, risk_level="medium"):
+    def worker():
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.base import MIMEBase
+        from email import encoders
+        import tempfile
+
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_ADDRESS
+        msg['To'] = "advance.houdavid@gmail.com"
+        msg['Subject'] = subject
+
+        if risk_level == "high":
+            bg_color = "#FF4C4C"  # Red
+        else:
+            bg_color = "#FFA500"  # Orange
+
+        html_body = f"""
+        <html>
+          <body style="background-color: {bg_color}; padding: 20px; font-family: Arial, sans-serif; color: white;">
+            <h2>{subject}</h2>
+            <p>{body}</p>
+          </body>
+        </html>
+        """
+
+        msg.attach(MIMEText(html_body, 'html'))
+
+        for idx, frame in enumerate(frames):
+            temp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+            temp_filename = temp_file.name
+            temp_file.close()
+
+            cv2.imwrite(temp_filename, frame)
+
+            with open(temp_filename, 'rb') as f:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(f.read())
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename=frame_{idx+1}.jpg')
+                msg.attach(part)
+
+            os.unlink(temp_filename)
+
+        try:
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+                server.send_message(msg)
+            print("✅ Background Email sent successfully.")
+        except Exception as e:
+            print(f"❌ Failed to send background email: {e}")
+
+    # 🚀 Run email sending in a new thread
+    threading.Thread(target=worker, daemon=True).start()
+
+
 
 if __name__ == '__main__':
     threading.Thread(target=recognition_worker, daemon=True).start()
