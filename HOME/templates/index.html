@@ -1,154 +1,194 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Smart Door Camera</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            margin-top: 20px;
-        }
-        #stream {
-            margin-top: 20px;
-            width: 640px;
-            height: 480px;
-            border: 2px solid #444;
-        }
-        .buttons {
-            margin-top: 20px;
-        }
-        button {
-            margin: 5px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        #risk-container {
-            margin-top: 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #risk-score {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        #risk-meter {
-            width: 300px;
-            height: 30px;
-            border: 2px solid #555;
-            background-color: lightgray;
-            position: relative;
-            border-radius: 15px;
-            overflow: hidden;
-        }
-        #risk-fill {
-            height: 100%;
-            width: 0%;
-            background-color: green;
-            transition: width 0.5s ease, background-color 0.5s ease;
-        }
-        #popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            border: 2px solid #333;
-            padding: 20px;
-            border-radius: 8px;
-            display: none;
-            max-width: 300px;
-            text-align: left;
-            z-index: 9999;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-        #close-btn {
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            cursor: pointer;
-            font-size: 20px;
-            font-weight: bold;
-            color: #555;
-        }
-        #popup-content {
-            margin-top: 10px;
-        }
-        .danger-action {
-            color: red;
-            font-weight: bold;
-        }
-        .normal-action {
-            color: green;
-            font-weight: normal;
-        }
-        .emotional-action {
-            color: orange;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Door Surveillance</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #eef2f7;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+
+    .container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      width: 320px;
+      text-align: center;
+    }
+
+    img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+    .buttons button {
+      padding: 10px 20px;
+      margin: 5px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+
+    .buttons button:hover {
+      background-color: #2980b9;
+    }
+
+    #risk-container {
+      margin-top: 30px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 600px;
+      text-align: center;
+	  margin-bottom: 30px;
+    }
+
+    #risk-meter {
+      width: 100%;
+      height: 30px;
+      background: lightgray;
+      border-radius: 15px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    #risk-fill {
+      height: 100%;
+      width: 0%;
+      background: green;
+      transition: width 0.5s, background-color 0.5s;
+    }
+
+    #otp-section input, #otp-section button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    #popup {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 20px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      display: none;
+      max-width: 300px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    #close-btn {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 20px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    .danger-action { color: red; font-weight: bold; }
+    .normal-action { color: green; }
+    .emotional-action { color: orange; font-weight: bold; }
+  </style>
 </head>
 
-
 <body>
+  <h1>Smart Door Surveillance</h1>
 
-<h1>Smart Door Surveillance</h1>
+  <!-- Risk Score -->
+  	<div id="risk-container">
+    	<div id="risk-score">Risk: 0</div>
+    	<div id="risk-meter">
+      	<div id="risk-fill"></div>
+    	</div>
+  	</div>
+  <div class="container">
 
-<!-- Flex container -->
-<div style="display: flex; justify-content: center; align-items: flex-start; gap: 40px; margin-top: 20px;">
-
-    <!-- Video Stream on the left -->
-    <div>
-        <img id="stream" src="/video_feed" alt="Video Stream" style="width:640px; height:480px; border: 2px solid #444;">
-        
-        <div class="buttons">
-            <button onclick="setStream('live')">Live Stream</button>
-            <button onclick="setStream('walk')">Walk Video</button>
-            <button onclick="setStream('entry')">Entry Video</button>
-            <button onclick="setStream('deliver')">Deliver Video</button>
-            <br>
-            <button onclick="fetch('/start_recording')">Start Recording</button>
-            <button onclick="stopAndSend()">Stop & Send</button>
-            <button onclick="location.href='/logs'">View Logs</button>
-        </div>
+    <!-- Video Stream -->
+    <div class="card">
+      <h2>Live Camera</h2>
+      <img id="stream" src="/video_feed" alt="Video Stream">
+      <div class="buttons">
+        <button onclick="setStream('live')">Live</button>
+        <button onclick="setStream('walk')">Walk</button>
+        <button onclick="setStream('entry')">Entry</button>
+        <button onclick="setStream('deliver')">Deliver</button>
+        <button onclick="fetch('/start_recording')">Start</button>
+        <button onclick="stopAndSend()">Stop & Analyze</button>
+        <button onclick="location.href='/logs'">View Logs</button>
+      </div>
     </div>
 
-    <!-- Door Control on the right -->
-    <div style="text-align: center;">
-        <h2>Door Control</h2>
-        <img id="door-image" src="/static/door_closed.png" alt="Door" style="width:200px; margin-top: 20px;">
-        
-        <div class="buttons">
-            <button onclick="openDoor()">Open Door</button>
-            <button onclick="closeDoor()">Close Door</button>
-        </div>
+    <!-- Door Control -->
+    <div class="card">
+      <h2>Door Control</h2>
+      <img id="door-image" src="/static/door_closed.png" alt="Door">
+      <div class="buttons">
+        <button onclick="openDoor()">Open Door</button>
+        <button onclick="closeDoor()">Close Door</button>
+      </div>
+
+      <h3 style="margin-top: 20px;">Send OTP to Friend</h3>
+      <div id="otp-section">
+        <input type="email" id="friend-email" placeholder="Friend's Email">
+        <button onclick="sendOtp()">Send OTP</button>
+        <div id="otp-message" style="color: green; margin-top: 10px;"></div>
+      </div>
     </div>
-	<h2>Generate OTP for Friend</h2>
 
-	<div id="otp-section" style="margin-top: 10px;">
-    	<input type="email" id="friend-email" placeholder="Friend's Email" style="padding: 10px; width: 250px; margin-bottom: 10px;">
-    	<button onclick="sendOtp()">Send OTP</button>
-    	<div id="otp-message" style="margin-top:10px; color:green;"></div>
-	</div>
+  </div>
 
-</div>
 
-<!-- Risk Score Section (below) -->
-<div id="risk-container" style="margin-top: 30px;">
-    <div id="risk-score">Risk: 0</div>
-    <div id="risk-meter">
-        <div id="risk-fill"></div>
-    </div>
-</div>
-
+  <!-- Popup -->
+  <div id="popup">
+    <span id="close-btn" onclick="closePopup()">&times;</span>
+    <div id="popup-content"></div>
+  </div>
 <script>
     let forceHighRisk = false;
     let riskHoldTimeout = null;
+	let riskInterval = null;
+
+	function startRiskInterval() {
+    	if (riskInterval) clearInterval(riskInterval);
+    	riskInterval = setInterval(updateRisk, 1000);
+	}
+
+	function stopRiskInterval() {
+    	if (riskInterval) clearInterval(riskInterval);
+    	riskInterval = null;
+	}
 
     function setStream(type) {
         const stream = document.getElementById("stream");
@@ -242,9 +282,13 @@
                     document.getElementById('risk-score').innerText = 'Risk: 90';
 
                     forceHighRisk = true;
+					stopRiskInterval();
+
                     clearTimeout(riskHoldTimeout);
                     riskHoldTimeout = setTimeout(() => {
                         forceHighRisk = false;
+						updateRisk();
+        				startRiskInterval(); 
                     }, 3000);
                 }
 
@@ -289,9 +333,7 @@
     	});
 	}
 
-
-
-    setInterval(updateRisk, 1000);
+	startRiskInterval();
 
 	async function checkDoorState() {
     	try {
@@ -313,6 +355,7 @@
 
 	// Check door state every second
 	setInterval(checkDoorState, 1000);
+
 	async function sendOtp() {
     	const email = document.getElementById('friend-email').value;
     	const messageBox = document.getElementById('otp-message');
