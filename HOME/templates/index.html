@@ -93,33 +93,50 @@
         }
     </style>
 </head>
+
+
 <body>
 
 <h1>Smart Door Surveillance</h1>
 
-<img id="stream" src="/video_feed" alt="Video Stream">
+<!-- Flex container -->
+<div style="display: flex; justify-content: center; align-items: flex-start; gap: 40px; margin-top: 20px;">
 
-<div class="buttons">
-    <button onclick="setStream('live')">Live Stream</button>
-    <button onclick="setStream('walk')">Walk Video</button>
-    <button onclick="setStream('entry')">Entry Video</button>
-    <button onclick="setStream('deliver')">Deliver Video</button>
-    <br>
-    <button onclick="fetch('/start_recording')">Start Recording</button>
-    <button onclick="stopAndSend()">Stop & Send</button>
-    <button onclick="location.href='/logs'">View Logs</button> <!-- ⭐ New button to view logs -->
+    <!-- Video Stream on the left -->
+    <div>
+        <img id="stream" src="/video_feed" alt="Video Stream" style="width:640px; height:480px; border: 2px solid #444;">
+        
+        <div class="buttons">
+            <button onclick="setStream('live')">Live Stream</button>
+            <button onclick="setStream('walk')">Walk Video</button>
+            <button onclick="setStream('entry')">Entry Video</button>
+            <button onclick="setStream('deliver')">Deliver Video</button>
+            <br>
+            <button onclick="fetch('/start_recording')">Start Recording</button>
+            <button onclick="stopAndSend()">Stop & Send</button>
+            <button onclick="location.href='/logs'">View Logs</button>
+        </div>
+    </div>
+
+    <!-- Door Control on the right -->
+    <div style="text-align: center;">
+        <h2>Door Control</h2>
+        <img id="door-image" src="/static/door_closed.png" alt="Door" style="width:200px; margin-top: 20px;">
+        
+        <div class="buttons">
+            <button onclick="openDoor()">Open Door</button>
+            <button onclick="closeDoor()">Close Door</button>
+        </div>
+    </div>
+
 </div>
 
-<div id="risk-container">
+<!-- Risk Score Section (below) -->
+<div id="risk-container" style="margin-top: 30px;">
     <div id="risk-score">Risk: 0</div>
     <div id="risk-meter">
         <div id="risk-fill"></div>
     </div>
-</div>
-
-<div id="popup">
-    <span id="close-btn" onclick="closePopup()">&times;</span>
-    <div id="popup-content"></div>
 </div>
 
 <script>
@@ -248,6 +265,15 @@
     function closePopup() {
         document.getElementById('popup').style.display = 'none';
     }
+
+	function openDoor() {
+    	document.getElementById('door-image').src = "/static/door_open.png";
+	}
+
+	function closeDoor() {
+    	document.getElementById('door-image').src = "/static/door_closed.png";
+	}
+
 
     setInterval(updateRisk, 1000);
 </script>
