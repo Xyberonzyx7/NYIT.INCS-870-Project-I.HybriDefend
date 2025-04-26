@@ -53,6 +53,44 @@
             background-color: green;
             transition: width 0.5s ease, background-color 0.5s ease;
         }
+        #popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #333;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            max-width: 300px;
+            text-align: left;
+            z-index: 9999;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        #close-btn {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            color: #555;
+        }
+        #popup-content {
+            margin-top: 10px;
+        }
+        .danger-action {
+            color: red;
+            font-weight: bold;
+        }
+        .normal-action {
+            color: green;
+            font-weight: normal;
+        }
+		.emotional-action {
+        	color: orange;
+        	font-weight: bold;
+    	}
     </style>
 </head>
 <body>
@@ -68,7 +106,7 @@
     <button onclick="setStream('deliver')">Deliver Video</button>
     <br>
     <button onclick="fetch('/start_recording')">Start Recording</button>
-    <button onclick="fetch('/stop_recording')">Stop & Send</button>
+    <button onclick="stopAndSend()">Stop & Send</button>
 </div>
 
 <div id="risk-container">
@@ -78,10 +116,18 @@
     </div>
 </div>
 
+<div id="popup">
+    <span id="close-btn" onclick="closePopup()">&times;</span>
+    <div id="popup-content"></div>
+</div>
+
 <script>
+	let forceHighRisk = false;
+	let riskHoldTimeout = null;
+
     function setStream(type) {
         const stream = document.getElementById("stream");
-        const timestamp = new Date().getTime(); // cache buster
+        const timestamp = new Date().getTime();
 
         if (type === 'live') {
             stream.src = `/video_feed?t=${timestamp}`;
@@ -92,6 +138,9 @@
 
     async function updateRisk() {
         try {
+			if (forceHighRisk) {
+            	return; // ⭐ Skip updating risk during forced period
+        	}
             const response = await fetch('/risk_score');
             const data = await response.json();
             const risk = data.risk;
@@ -99,13 +148,9 @@
             const scoreText = document.getElementById('risk-score');
             const fillBar = document.getElementById('risk-fill');
 
-            // Update number
             scoreText.innerText = `Risk: ${risk}`;
-
-            // Update meter width
             fillBar.style.width = `${risk}%`;
 
-            // Change color based on level
             if (risk <= 50) {
                 fillBar.style.backgroundColor = 'green';
             } else if (risk <= 85) {
@@ -118,8 +163,96 @@
         }
     }
 
-    setInterval(updateRisk, 1000); // update every second
+    async function stopAndSend() {
+        await fetch('/stop_recording');
+        showPopup('Analyzing video... Please wait.');
+        checkRekognitionResult();
+    }
+
+	async function checkRekognitionResult() {
+    	const popup = document.getElementById('popup');
+    	const popupContent = document.getElementById('popup-content');
+
+    	const dangerActions = ["Fighting", "Punching", "Shooting", "Stealing", "Breaking Door", "Breaking Glass", "Trespassing", "Weapon", "Slapping", "Boxing", "Fist"];
+    	const emotionalActions = ["Crying", "Sad", "Worried"];
+    	const normalActions = ["Eating", "Playing Volleyball", "Indoors", "Photography", "Portrait"];
+
+    	while (true) {
+        	const response = await fetch('/rekognition_result');
+        	const data = await response.json();
+
+        	if (data.status === 'done') {
+            	let dangerHtml = '';
+            	let emotionHtml = '';
+            	let normalHtml = '';
+
+            	const uniqueActions = [...new Set(data.actions)];
+
+            	uniqueActions.forEach(action => {
+                	if (dangerActions.includes(action)) {
+                    	dangerHtml += `<li class='danger-action'>${action}</li>`;
+                	} else if (emotionalActions.includes(action)) {
+                    	emotionHtml += `<li class='emotional-action'>${action}</li>`;
+                	} else {
+                    	normalHtml += `<li class='normal-action'>${action}</li>`;
+                	}
+            	});
+
+            	let html = '<strong>Analysis Result:</strong><br><ul>';
+            	if (dangerHtml) {
+                	html += `<li><span style="color:red;font-weight:bold;">Danger Actions:</span><ul>${dangerHtml}</ul></li>`;
+            	}
+            	if (emotionHtml) {
+                	html += `<li><span style="color:orange;font-weight:bold;">Emotional Signs:</span><ul>${emotionHtml}</ul></li>`;
+            	}
+            	if (normalHtml) {
+                	html += `<li><span style="color:green;font-weight:bold;">Normal Actions:</span><ul>${normalHtml}</ul></li>`;
+            	}
+            	html += '</ul>';
+            	popupContent.innerHTML = html;
+
+            	// Force risk high if danger actions
+            	if (uniqueActions.some(a => dangerActions.includes(a))) {
+                	document.getElementById('risk-fill').style.width = '90%';
+                	document.getElementById('risk-fill').style.backgroundColor = 'red';
+                	document.getElementById('risk-score').innerText = 'Risk: 90';
+
+                	forceHighRisk = true;
+                	clearTimeout(riskHoldTimeout);
+                	riskHoldTimeout = setTimeout(() => {
+                    	forceHighRisk = false;
+                	}, 3000);
+            	}
+
+            	popup.style.display = 'block';
+            	break; // ⭐⭐ ADD THIS LINE TO STOP WHILE LOOP
+        	}
+
+        	if (data.status === 'failed') {
+            	popupContent.innerHTML = '<strong>Analysis Failed</strong>';
+            	popup.style.display = 'block';
+            	break; // ⭐⭐ Also stop if failed
+        	}
+
+        	await new Promise(resolve => setTimeout(resolve, 3000));
+    	}
+	}
+
+
+    function showPopup(message) {
+        const popup = document.getElementById('popup');
+        const popupContent = document.getElementById('popup-content');
+        popupContent.innerHTML = message;
+        popup.style.display = 'block';
+    }
+
+    function closePopup() {
+        document.getElementById('popup').style.display = 'none';
+    }
+
+    setInterval(updateRisk, 1000);
 </script>
+
 
 </body>
 </html>

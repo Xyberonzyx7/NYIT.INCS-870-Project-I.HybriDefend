@@ -1,5 +1,7 @@
 # Readme
 
+[Usage](https://us-east-2.console.aws.amazon.com/rekognition/home?region=us-east-2#/streaming-video-events)
+
 1. Create bucket
    ![picture 0](assets/2025-04-25-20-04-13.png)  
 2. Create IAM user
