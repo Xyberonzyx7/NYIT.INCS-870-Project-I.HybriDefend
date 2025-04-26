@@ -12,8 +12,12 @@ import datetime
 import os
 import subprocess
 
-sys.path.append('..')
-from secret import SECRET_KEY, IV_HEX
+# app.py (add to your existing Flask app)
+import random, smtplib, time
+from flask import Flask, request, render_template, jsonify
+from email.mime.text import MIMEText
+import email_config
+
 from hydf_face_recognition.face import identify_face, get_name_label
 from hydf_object_detection.object import identify_object, get_object_label
 from hydf_anomaly_detection.anomaly import AnomalyDetector, get_normal_behavior
@@ -300,9 +304,9 @@ def process_frame(frame, frame_count):
         # ⭐ Save a flag that the door should open
         with app.app_context():
             app.config['DOOR_STATE'] = 'open'
-    else:
-        with app.app_context():
-            app.config['DOOR_STATE'] = 'closed'
+    # else:
+    #     with app.app_context():
+    #         app.config['DOOR_STATE'] = 'closed'
 
     object_presence = detected_objects
 
@@ -320,6 +324,71 @@ def capture_frames():
         success, frame = cap.read()
         if success:
             frames.append(add_timestamp(frame))
+
+@app.route('/set_door_state', methods=['POST'])
+def set_door_state():
+    state = request.form.get('state')
+    if state in ['open', 'closed']:
+        app.config['DOOR_STATE'] = state
+        return 'Door state updated', 200
+    else:
+        return 'Invalid state', 400
+
+
+EMAIL_ADDRESS = email_config.EMAIL_ADDRESS
+EMAIL_PASSWORD = email_config.EMAIL_PASSWORD
+
+# OTP store: email -> (otp, timestamp)
+otp_store = {}
+OTP_EXPIRY_SECONDS = 300  # 5 minutes
+
+@app.route('/send_otp', methods=['POST'])
+def send_otp():
+    email = request.form.get('email')
+    if not email:
+        return 'Missing email', 400
+
+    otp = str(random.randint(100000, 999999))
+    otp_store[email] = (otp, time.time())
+
+    msg = MIMEText(f"Your OTP for door access is: {otp}. Enter here: http://localhost:5000/otp_entry")
+    msg['Subject'] = 'Your Smart Door OTP'
+    msg['From'] = EMAIL_ADDRESS
+    msg['To'] = email
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            server.send_message(msg)
+    except Exception as e:
+        return f"Failed to send email: {e}", 500
+
+    return 'OTP sent!'
+
+@app.route('/otp_entry')
+def otp_entry_page():
+    return render_template('otp.html')
+
+@app.route('/verify_otp', methods=['POST'])
+def verify_otp():
+    email = request.form.get('email')
+    otp_input = request.form.get('otp')
+
+    if email not in otp_store:
+        return 'Invalid email or expired OTP', 400
+
+    otp, timestamp = otp_store[email]
+    if time.time() - timestamp > OTP_EXPIRY_SECONDS:
+        del otp_store[email]
+        return 'OTP expired', 400
+
+    if otp_input != otp:
+        return 'Invalid OTP', 400
+
+    # Correct OTP!
+    del otp_store[email]
+    app.config['DOOR_STATE'] = 'open'
+    return 'OTP verified! Door is now open.'
 
 if __name__ == '__main__':
     threading.Thread(target=recognition_worker, daemon=True).start()

@@ -128,6 +128,13 @@
             <button onclick="closeDoor()">Close Door</button>
         </div>
     </div>
+	<h2>Generate OTP for Friend</h2>
+
+	<div id="otp-section" style="margin-top: 10px;">
+    	<input type="email" id="friend-email" placeholder="Friend's Email" style="padding: 10px; width: 250px; margin-bottom: 10px;">
+    	<button onclick="sendOtp()">Send OTP</button>
+    	<div id="otp-message" style="margin-top:10px; color:green;"></div>
+	</div>
 
 </div>
 
@@ -266,13 +273,22 @@
         document.getElementById('popup').style.display = 'none';
     }
 
-	function openDoor() {
-    	document.getElementById('door-image').src = "/static/door_open.png";
+	async function openDoor() {
+    	await fetch('/set_door_state', {
+        	method: 'POST',
+        	headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        	body: 'state=open'
+    	});
 	}
 
-	function closeDoor() {
-    	document.getElementById('door-image').src = "/static/door_closed.png";
+	async function closeDoor() {
+    	await fetch('/set_door_state', {
+        	method: 'POST',
+        	headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        	body: 'state=closed'
+    	});
 	}
+
 
 
     setInterval(updateRisk, 1000);
@@ -297,6 +313,29 @@
 
 	// Check door state every second
 	setInterval(checkDoorState, 1000);
+	async function sendOtp() {
+    	const email = document.getElementById('friend-email').value;
+    	const messageBox = document.getElementById('otp-message');
+
+    	if (!email) {
+        	messageBox.style.color = 'red';
+        	messageBox.innerText = "Please enter an email address.";
+        	return;
+    	}
+
+    	const formData = new URLSearchParams();
+    	formData.append('email', email);
+
+    	const response = await fetch('/send_otp', {
+        	method: 'POST',
+        	headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        	body: formData
+    	});
+
+    	const text = await response.text();
+    	messageBox.style.color = response.ok ? 'green' : 'red';
+    	messageBox.innerText = text;
+	}
 
 </script>
 

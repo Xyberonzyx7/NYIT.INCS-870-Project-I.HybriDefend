@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enter OTP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 80px;
+        }
+        form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+        }
+        input[type="email"], input[type="text"] {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            color: green;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <form id="otp-form">
+        <h2>Enter OTP</h2>
+        <input type="email" id="email" name="email" placeholder="Your Email" required>
+        <input type="text" id="otp" name="otp" placeholder="Enter OTP" required>
+        <button type="submit">Verify OTP</button>
+        <div id="message"></div>
+    </form>
+
+    <script>
+        document.getElementById('otp-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const otp = document.getElementById('otp').value;
+
+            const response = await fetch('/verify_otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`
+            });
+
+            const msgBox = document.getElementById('message');
+            const text = await response.text();
+            msgBox.innerText = text;
+            msgBox.style.color = response.ok ? 'green' : 'red';
+        });
+    </script>
+
+</body>
+</html>

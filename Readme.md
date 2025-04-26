@@ -9,6 +9,11 @@
 		SECRET_KEY = "anythinghere"
 		IV_HEX = "01100001000111010010001000100000"  # 16 bytes = 128 bitsIV = b
 		```
+	- HOME/email_config.py
+		```python
+		EMAIL_ADDRESS = "xxxx.xxxx@gmail.com"
+		EMAIL_PASSWORD = "xxxx xxxx xxxx xxxx"  # Use the App Password from Google
+		```
 
 - HOME (using python 3.10)
 	- py -3.10 venv venv_py310
