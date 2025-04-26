@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Door Surveillance</title>
   <style>
+	@keyframes flashOrange {
+  	0% { background-color: #eef2f7; }
+  	50% { background-color: #ffe0b3; }
+  	100% { background-color: #eef2f7; }
+	}
+
+	@keyframes flashRed {
+  	0% { background-color: #eef2f7; }
+  	50% { background-color: #ffcccc; }
+  	100% { background-color: #eef2f7; }
+	}
+
+	.flash-orange {
+  	animation: flashOrange 1s infinite;
+	}
+
+	.flash-red {
+  	animation: flashRed 1s infinite;
+	}
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #eef2f7;
@@ -216,12 +236,19 @@
             scoreText.innerText = `Risk: ${risk}`;
             fillBar.style.width = `${risk}%`;
 
+			// flashing
+			const body = document.body;
+        	body.classList.remove('flash-orange', 'flash-red'); // remove old flashing first
+
             if (risk <= 50) {
                 fillBar.style.backgroundColor = 'green';
+				body.style.backgroundColor = '#eef2f7';  // reset background color
             } else if (risk <= 85) {
                 fillBar.style.backgroundColor = 'orange';
+				body.classList.add('flash-orange'); // start orange flashing
             } else {
                 fillBar.style.backgroundColor = 'red';
+				body.classList.add('flash-red'); // start red flashing
             }
         } catch (err) {
             console.error('Risk update failed', err);
@@ -283,6 +310,10 @@
 
                     forceHighRisk = true;
 					stopRiskInterval();
+
+    				//Manually make the background flash red immediately
+    				document.body.classList.remove('flash-orange', 'flash-red');
+    				document.body.classList.add('flash-red');
 
                     clearTimeout(riskHoldTimeout);
                     riskHoldTimeout = setTimeout(() => {
