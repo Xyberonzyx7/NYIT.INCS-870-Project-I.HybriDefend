@@ -257,6 +257,10 @@ def video_file(name):
 
     return Response(gen_file_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/door_state')
+def door_state():
+    return jsonify({'state': app.config.get('DOOR_STATE', 'closed')})
+
 def process_frame(frame, frame_count):
     global anomaly_label, object_labels, current_risk_score, object_presence
 
@@ -287,9 +291,18 @@ def process_frame(frame, frame_count):
         log_event(frame, f"{obj} appeared")
 
     # Disappearance logging
-    disappeared_objects = object_presence - detected_objects
+    # disappeared_objects = object_presence - detected_objects
     # for obj in disappeared_objects:
     #     log_event(frame, f"{obj} disappeared")
+    # Inside process_frame()
+
+    if current_name.lower() == "david" and anomaly_label.lower() == "enter":
+        # ⭐ Save a flag that the door should open
+        with app.app_context():
+            app.config['DOOR_STATE'] = 'open'
+    else:
+        with app.app_context():
+            app.config['DOOR_STATE'] = 'closed'
 
     object_presence = detected_objects
 

@@ -276,6 +276,28 @@
 
 
     setInterval(updateRisk, 1000);
+
+	async function checkDoorState() {
+    	try {
+        	const response = await fetch('/door_state');
+        	const data = await response.json();
+        	const state = data.state;
+
+        	const doorImage = document.getElementById('door-image');
+
+        	if (state === 'open') {
+            	doorImage.src = "/static/door_open.png";  // or door_open.gif if you prefer
+        	} else {
+            	doorImage.src = "/static/door_closed.png";
+        	}
+    	} catch (error) {
+        	console.error('Failed to check door state', error);
+    	}
+	}
+
+	// Check door state every second
+	setInterval(checkDoorState, 1000);
+
 </script>
 
 </body>
