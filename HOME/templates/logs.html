@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Logs</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .log-entry { margin-bottom: 30px; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+        img { max-width: 300px; margin-top: 10px; border: 1px solid #ccc; }
+        h1 { text-align: center; }
+    </style>
+</head>
+<body>
+
+<h1>Event Logs</h1>
+
+{% for log in logs %}
+<div class="log-entry">
+    <strong>{{ log.time }}</strong><br>
+    {{ log.description }}<br>
+    <img src="/{{ log.image }}" alt="Log Image">
+</div>
+{% else %}
+<p>No logs yet.</p>
+{% endfor %}
+
+</body>
+</html>

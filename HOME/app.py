@@ -1,5 +1,5 @@
 import json
-from flask import Flask, Response, render_template, request, jsonify
+from flask import Flask, Response, render_template, request, jsonify, send_from_directory
 import cv2, threading, requests, base64
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
@@ -41,8 +41,14 @@ anom_buffer = deque(maxlen=FRAME_SIZE)
 votes = deque(maxlen=5)
 anom_lock = threading.Lock()
 anomaly_label = '...'
+object_presence = set()  # ⭐ New: to track objects seen
+log_entries = []         # ⭐ New: to track logs
+LOG_FOLDER = "static/logs"      # ⭐ New: logs folder
 
 anom_detector = AnomalyDetector()
+
+if not os.path.exists(LOG_FOLDER):
+    os.makedirs(LOG_FOLDER)
 
 # --- Threads ---
 
@@ -72,8 +78,7 @@ def anomaly_worker():
 # --- Utils ---
 
 def add_timestamp(frame):
-    from datetime import datetime
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     height, width, _ = frame.shape
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.6
@@ -109,11 +114,38 @@ def calculate_risk_score(name_label, object_labels, behavior_label):
 
     return min(risk_score, 100)
 
+def log_event(frame, description):
+    def save_log():
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"{LOG_FOLDER}/{timestamp}.jpg"
+        cv2.imwrite(filename, frame)
+
+        # Only after the image is actually saved, then add to log_entries
+        log_entry = {
+            'time': timestamp,
+            'description': description,
+            'image': f"static/logs/{timestamp}.jpg"  # ⭐ Make sure path includes static/
+        }
+        log_entries.append(log_entry)
+
+        # Save the logs.json again
+        with open(f"{LOG_FOLDER}/logs.json", "w") as f:
+            json.dump(log_entries, f, indent=2)
+
+    threading.Timer(2.0, save_log).start()
+
+
+
 # --- Routes ---
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/logs')
+def view_logs():
+    return render_template('logs.html', logs=reversed(log_entries))
+
 
 @app.route('/start_recording')
 def start_recording():
@@ -128,23 +160,19 @@ def stop_recording():
     global recording, frames, latest_uploaded_key, rekognition_job_id
     recording = False
 
-    # 1. Save original video
     out = cv2.VideoWriter('temp.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, (640, 480))
     for frame in frames:
         out.write(frame)
     out.release()
 
-    # 2. Re-encode to mp4
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     final_mp4 = f"{timestamp}.mp4"
     subprocess.run(["ffmpeg", "-i", "temp.avi", "-c:v", "libx264", "-preset", "veryfast", "-movflags", "+faststart", final_mp4])
 
-    # 3. Upload to S3
     s3_client.upload_file(final_mp4, s3_bucket, final_mp4)
     latest_uploaded_key = final_mp4
     print(f"📤 Uploaded {final_mp4} to S3 bucket {s3_bucket}")
 
-    # 4. Start Rekognition
     rekognition_response = rekognition_client.start_label_detection(
         Video={'S3Object': {'Bucket': s3_bucket, 'Name': final_mp4}},
         MinConfidence=50,
@@ -152,12 +180,10 @@ def stop_recording():
     rekognition_job_id = rekognition_response['JobId']
     print(f"🚀 Started Rekognition Job ID: {rekognition_job_id}")
 
-    # 5. Cleanup
     os.remove("temp.avi")
     os.remove(final_mp4)
 
     return "Recording stopped, uploaded and Rekognition started"
-
 
 @app.route('/rekognition_result')
 def rekognition_result():
@@ -175,7 +201,6 @@ def rekognition_result():
         return {'status': 'failed'}
 
     if result['JobStatus'] == 'SUCCEEDED':
-        # 💾 Save result to file
         with open("labels_output.json", "w") as f:
             json.dump(result, f, indent=2)
         print("💾 Saved detailed result to labels_output.json")
@@ -232,10 +257,8 @@ def video_file(name):
 
     return Response(gen_file_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# -- Helpers --
-
 def process_frame(frame, frame_count):
-    global anomaly_label, object_labels, current_risk_score
+    global anomaly_label, object_labels, current_risk_score, object_presence
 
     if frame_count % 30 == 0:
         try:
@@ -248,14 +271,29 @@ def process_frame(frame, frame_count):
 
     obj_result = identify_object(frame)
 
+    detected_objects = set()
+
     if len(obj_result.boxes) > 0:
         raw = obj_result.boxes.data.cpu().numpy()
         classes = raw[:, 5].astype(int)
         object_labels = [obj_result.names[c] for c in classes]
+        detected_objects = set(object_labels)
     else:
-        object_labels = []
+        object_labels = set()
 
-    current_risk_score = calculate_risk_score(current_name, object_labels, anomaly_label)
+    # New appearance logging
+    new_objects = detected_objects - object_presence
+    for obj in new_objects:
+        log_event(frame, f"{obj} appeared")
+
+    # Disappearance logging
+    disappeared_objects = object_presence - detected_objects
+    # for obj in disappeared_objects:
+    #     log_event(frame, f"{obj} disappeared")
+
+    object_presence = detected_objects
+
+    current_risk_score = calculate_risk_score(current_name, list(object_labels), anomaly_label)
 
     frame = obj_result.plot()
     cv2.putText(frame, f"Behavior: {anomaly_label.upper()}", (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)

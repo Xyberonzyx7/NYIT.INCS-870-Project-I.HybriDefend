@@ -87,10 +87,10 @@
             color: green;
             font-weight: normal;
         }
-		.emotional-action {
-        	color: orange;
-        	font-weight: bold;
-    	}
+        .emotional-action {
+            color: orange;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +107,7 @@
     <br>
     <button onclick="fetch('/start_recording')">Start Recording</button>
     <button onclick="stopAndSend()">Stop & Send</button>
+    <button onclick="location.href='/logs'">View Logs</button> <!-- ⭐ New button to view logs -->
 </div>
 
 <div id="risk-container">
@@ -122,8 +123,8 @@
 </div>
 
 <script>
-	let forceHighRisk = false;
-	let riskHoldTimeout = null;
+    let forceHighRisk = false;
+    let riskHoldTimeout = null;
 
     function setStream(type) {
         const stream = document.getElementById("stream");
@@ -138,9 +139,9 @@
 
     async function updateRisk() {
         try {
-			if (forceHighRisk) {
-            	return; // ⭐ Skip updating risk during forced period
-        	}
+            if (forceHighRisk) {
+                return;
+            }
             const response = await fetch('/risk_score');
             const data = await response.json();
             const risk = data.risk;
@@ -169,75 +170,73 @@
         checkRekognitionResult();
     }
 
-	async function checkRekognitionResult() {
-    	const popup = document.getElementById('popup');
-    	const popupContent = document.getElementById('popup-content');
+    async function checkRekognitionResult() {
+        const popup = document.getElementById('popup');
+        const popupContent = document.getElementById('popup-content');
 
-    	const dangerActions = ["Fighting", "Punching", "Shooting", "Stealing", "Breaking Door", "Breaking Glass", "Trespassing", "Weapon", "Slapping", "Boxing", "Fist"];
-    	const emotionalActions = ["Crying", "Sad", "Worried"];
-    	const normalActions = ["Eating", "Playing Volleyball", "Indoors", "Photography", "Portrait"];
+        const dangerActions = ["Fighting", "Punching", "Shooting", "Stealing", "Breaking Door", "Breaking Glass", "Trespassing", "Weapon", "Slapping", "Boxing", "Fist"];
+        const emotionalActions = ["Crying", "Sad", "Worried"];
+        const normalActions = ["Eating", "Playing Volleyball", "Indoors", "Photography", "Portrait"];
 
-    	while (true) {
-        	const response = await fetch('/rekognition_result');
-        	const data = await response.json();
+        while (true) {
+            const response = await fetch('/rekognition_result');
+            const data = await response.json();
 
-        	if (data.status === 'done') {
-            	let dangerHtml = '';
-            	let emotionHtml = '';
-            	let normalHtml = '';
+            if (data.status === 'done') {
+                let dangerHtml = '';
+                let emotionHtml = '';
+                let normalHtml = '';
 
-            	const uniqueActions = [...new Set(data.actions)];
+                const uniqueActions = [...new Set(data.actions)];
 
-            	uniqueActions.forEach(action => {
-                	if (dangerActions.includes(action)) {
-                    	dangerHtml += `<li class='danger-action'>${action}</li>`;
-                	} else if (emotionalActions.includes(action)) {
-                    	emotionHtml += `<li class='emotional-action'>${action}</li>`;
-                	} else {
-                    	normalHtml += `<li class='normal-action'>${action}</li>`;
-                	}
-            	});
+                uniqueActions.forEach(action => {
+                    if (dangerActions.includes(action)) {
+                        dangerHtml += `<li class='danger-action'>${action}</li>`;
+                    } else if (emotionalActions.includes(action)) {
+                        emotionHtml += `<li class='emotional-action'>${action}</li>`;
+                    } else {
+                        normalHtml += `<li class='normal-action'>${action}</li>`;
+                    }
+                });
 
-            	let html = '<strong>Analysis Result:</strong><br><ul>';
-            	if (dangerHtml) {
-                	html += `<li><span style="color:red;font-weight:bold;">Danger Actions:</span><ul>${dangerHtml}</ul></li>`;
-            	}
-            	if (emotionHtml) {
-                	html += `<li><span style="color:orange;font-weight:bold;">Emotional Signs:</span><ul>${emotionHtml}</ul></li>`;
-            	}
-            	if (normalHtml) {
-                	html += `<li><span style="color:green;font-weight:bold;">Normal Actions:</span><ul>${normalHtml}</ul></li>`;
-            	}
-            	html += '</ul>';
-            	popupContent.innerHTML = html;
+                let html = '<strong>Analysis Result:</strong><br><ul>';
+                if (dangerHtml) {
+                    html += `<li><span style="color:red;font-weight:bold;">Danger Actions:</span><ul>${dangerHtml}</ul></li>`;
+                }
+                if (emotionHtml) {
+                    html += `<li><span style="color:orange;font-weight:bold;">Emotional Signs:</span><ul>${emotionHtml}</ul></li>`;
+                }
+                if (normalHtml) {
+                    html += `<li><span style="color:green;font-weight:bold;">Normal Actions:</span><ul>${normalHtml}</ul></li>`;
+                }
+                html += '</ul>';
+                popupContent.innerHTML = html;
 
-            	// Force risk high if danger actions
-            	if (uniqueActions.some(a => dangerActions.includes(a))) {
-                	document.getElementById('risk-fill').style.width = '90%';
-                	document.getElementById('risk-fill').style.backgroundColor = 'red';
-                	document.getElementById('risk-score').innerText = 'Risk: 90';
+                if (uniqueActions.some(a => dangerActions.includes(a))) {
+                    document.getElementById('risk-fill').style.width = '90%';
+                    document.getElementById('risk-fill').style.backgroundColor = 'red';
+                    document.getElementById('risk-score').innerText = 'Risk: 90';
 
-                	forceHighRisk = true;
-                	clearTimeout(riskHoldTimeout);
-                	riskHoldTimeout = setTimeout(() => {
-                    	forceHighRisk = false;
-                	}, 3000);
-            	}
+                    forceHighRisk = true;
+                    clearTimeout(riskHoldTimeout);
+                    riskHoldTimeout = setTimeout(() => {
+                        forceHighRisk = false;
+                    }, 3000);
+                }
 
-            	popup.style.display = 'block';
-            	break; // ⭐⭐ ADD THIS LINE TO STOP WHILE LOOP
-        	}
+                popup.style.display = 'block';
+                break;
+            }
 
-        	if (data.status === 'failed') {
-            	popupContent.innerHTML = '<strong>Analysis Failed</strong>';
-            	popup.style.display = 'block';
-            	break; // ⭐⭐ Also stop if failed
-        	}
+            if (data.status === 'failed') {
+                popupContent.innerHTML = '<strong>Analysis Failed</strong>';
+                popup.style.display = 'block';
+                break;
+            }
 
-        	await new Promise(resolve => setTimeout(resolve, 3000));
-    	}
-	}
-
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+    }
 
     function showPopup(message) {
         const popup = document.getElementById('popup');
@@ -252,7 +251,6 @@
 
     setInterval(updateRisk, 1000);
 </script>
-
 
 </body>
 </html>
