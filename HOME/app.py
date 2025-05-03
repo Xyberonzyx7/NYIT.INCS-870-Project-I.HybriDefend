@@ -140,7 +140,7 @@ def log_event(frame, description):
         with open(f"{LOG_FOLDER}/logs.json", "w") as f:
             json.dump(log_entries, f, indent=2)
 
-    threading.Timer(2.0, save_log).start()
+    threading.Timer(6.0, save_log).start()
 
 
 
