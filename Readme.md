@@ -1,55 +1,42 @@
-# ReadMe
+# Hybrid Defend
 
-### Environment Setup
+## Environmental Setup
 
-- GLOBAL
-	#### Files:
-	- secret.py
-		```python
-		SECRET_KEY = "anythinghere"
-		IV_HEX = "01100001000111010010001000100000"  # 16 bytes = 128 bitsIV = b
-		```
-	- HOME/email_config.py
-		```python
-		EMAIL_ADDRESS = "xxxx.xxxx@gmail.com"
-		EMAIL_PASSWORD = "xxxx xxxx xxxx xxxx"  # Use the App Password from Google
-		```
+**Install Anaconda**
 
-- HOME (using python 3.10)
-	- py -3.10 venv venv_py310
-	- .\venv_py310\Scripts\Activate.ps1
-	- python app.py
-	- deactivate
+It makes managing Python versions, libraries, and virtual environments easy
 
-	#### Libraries
-	- pip install flask
-	- pip install opencv-python
-	- pip install requests
-	- pip install pycryptodome
-	- pip install tensorflow
-	- pip install face_recognition
-	- pip install numpy
-	- pip install pillow
-	- pip install ultralytics
-	- pip install opencv-python ultralytics numpy
+```cmd
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe -o .\miniconda.exe
 
+start /wait "" .\miniconda.exe /S
 
+del .\miniconda.exe
+```
+[anaconda install instructions](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
 
-	#### Files
-	- HOME/hydf_face_recognition/faces/
-    	- {Username1}/{Images}
-    	- {Username2}/{Images}
+**Create & activate python virtual environment**
 
-- CLOUD (using python 3.10)
-	- py -3.10 venv venv_py310
-	- .\venv_py310\Scripts\Activate.ps1
-	- python cloud_app.py
-	- deactivate
+```cmd
+conda create -n tfenv python=3.11
 
-	#### Libraries
-	- pip install pycryptodome
+conda activate tfenv
+```
+**Install dependencies**
 
-### Learn
-- requirements.txt
-	- pip freeze > requirements.txt
-	- pip install -r requirements.txt
+```cmd
+pip install -r requirements.txt
+```
+
+**Gmail App Password**
+
+1. Go to [Google Account Security](https://myaccount.google.com/security).
+2. Search **App Passwords**.
+3. Provide a new app name
+4. Google will generate a 16-character password. Copy it.
+5. Create and add your credentials `{project}/email_config.py`
+
+```python
+EMAIL_ADDRESS = "your_email@gmail.com"
+EMAIL_PASSWORD = "new_generated_app_password"
+```
