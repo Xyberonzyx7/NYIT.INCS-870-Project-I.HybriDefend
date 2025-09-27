@@ -98,4 +98,4 @@ def identify_face(input_data=None, input_path=None):
 
 if __name__ == "__main__":
 
-    identify_face(None, module_dir + "/faces/unknown2.png")
+    print( "test face result: " + identify_face(None, module_dir + "/test_face.png"))

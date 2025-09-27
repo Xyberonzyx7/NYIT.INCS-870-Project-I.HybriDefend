@@ -28,6 +28,8 @@ conda activate tfenv
 pip install -r requirements.txt
 ```
 
+## Gamil Notification Setup
+
 **Gmail App Password**
 
 1. Go to [Google Account Security](https://myaccount.google.com/security).
@@ -40,3 +42,47 @@ pip install -r requirements.txt
 EMAIL_ADDRESS = "your_email@gmail.com"
 EMAIL_PASSWORD = "new_generated_app_password"
 ```
+
+## Facial Recognition Setup
+
+### Folder Layout
+
+Create this structure inside your project:
+
+```
+NYIT.INCS-870-Project-I.HybriDefend/
+└─ hydf_face_recognition/
+   ├─ face.py
+   └─ faces/          # <-- Create this folder
+      ├─ David/
+      │  ├─ img1.jpg
+      │  ├─ img2.jpg
+      │  └─ ...
+      └─ Kevin/
+         ├─ img1.jpg
+         ├─ img2.jpg
+         └─ ...
+```
+
+* Put **multiple clear photos** of **David** inside `faces/David/`.
+* Put **multiple clear photos** of **Kevin** inside `faces/Kevin/`.
+* The current code is set up only for these two people.
+
+### Create Face Encodings
+
+Run:
+
+```bash
+python hydf_face_recognition/face.py
+```
+
+This will:
+
+* Process the images in `faces/David/` and `faces/Kevin/`.
+* Generate `known_faces.json` with stored encodings.
+* Perform identify test on `test_face.png`.
+
+### Notes
+
+* If you replace the photos of David or Kevin, delete `known_faces.json` and run again to regenerate encodings.
+

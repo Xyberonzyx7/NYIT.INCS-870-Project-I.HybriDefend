@@ -1,7 +1,8 @@
+hydf_face_recognition/faces/David/*
+hydf_face_recognition/faces/Kevin/*
 recorded.avi
 __pycache__/
 venv*/
-hydf_face_recognition/faces/
 known_faces.json
 hydf_object_detection/box/
 hydf_object_detection/gun/
