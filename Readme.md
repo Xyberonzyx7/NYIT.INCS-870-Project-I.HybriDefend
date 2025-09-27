@@ -86,3 +86,18 @@ This will:
 
 * If you replace the photos of David or Kevin, delete `known_faces.json` and run again to regenerate encodings.
 
+## Object Detection Setup
+
+* No additional setup is required.
+
+### Model
+
+* **Framework**: [Ultralytics YOLOv8](https://docs.ultralytics.com)
+* **Model file**: `hydf_object_detection/best.pt` (already included in the project)
+* **Classes supported**:
+
+  * `box`
+  * `gun`
+  * `face`
+  * `face_half_covered`
+  * `face_fully_covered`
