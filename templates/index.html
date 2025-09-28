@@ -62,7 +62,12 @@
       border-radius: 10px;
       margin-bottom: 15px;
     }
-
+  	.label {
+    	margin: 8px 0 4px;
+    	font-size: 0.9em;
+    	font-weight: bold;
+    	color: #555;
+  	}
     .buttons button {
       padding: 10px 20px;
       margin: 5px;
@@ -156,19 +161,25 @@
   <div class="container">
 
     <!-- Video Stream -->
-    <div class="card">
-      <h2>Live Camera</h2>
-      <img id="stream" src="/video_feed" alt="Video Stream">
-      <div class="buttons">
-        <button onclick="setStream('live')">Live</button>
-        <button onclick="setStream('walk')">Walk</button>
-        <button onclick="setStream('entry')">Entry</button>
-        <button onclick="setStream('deliver')">Deliver</button>
-        <button onclick="fetch('/start_recording')">Start</button>
-        <button onclick="stopAndSend()">Stop & Analyze</button>
-        <button onclick="location.href='/logs'">View Logs</button>
-      </div>
-    </div>
+	<div class="card">
+  	<h2>Live Camera</h2>
+  	<img id="stream" src="/video_feed" alt="Video Stream">
+  	<div class="buttons">
+    	<button onclick="setStream('live')">Live</button>
+    
+    	<p class="label">HMM Test (using static video)</p>
+    	<button onclick="setStream('walk')">Walk</button>
+    	<button onclick="setStream('entry')">Entry</button>
+    	<!-- <button onclick="setStream('deliver')">Deliver</button> -->
+
+    	<p class="label">AWS S3 (configure credentials in <code>app.py</code>)</p>
+    	<button onclick="fetch('/start_recording')">Start</button>
+    	<button onclick="stopAndSend()">Stop &amp; Analyze</button>
+    
+    	<p class="label">Logs</p>
+    	<button onclick="location.href='/logs'">View Logs</button>
+  	</div>
+	</div>
 
     <!-- Door Control -->
     <div class="card">
