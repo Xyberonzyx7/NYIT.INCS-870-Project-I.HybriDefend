@@ -101,3 +101,7 @@ This will:
   * `face`
   * `face_half_covered`
   * `face_fully_covered`
+
+## AWS S3 Setup (Cloud Service)
+
+* Please refer to [AWS S3 Setup](hydf_aws_rekognition/Readme.md)

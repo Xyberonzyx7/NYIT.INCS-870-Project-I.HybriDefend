@@ -73,7 +73,7 @@
 	[8.5s] Teen (87.9%)  
 	💾 Saved detailed result to labels_output.json
 
-10. Is my video encrypted during uploading and storing? YES
+10. Is my video encrypted during uploading and storing? YES  
     ![picture 15](assets/2025-04-26-01-23-15.png)  
 
 
