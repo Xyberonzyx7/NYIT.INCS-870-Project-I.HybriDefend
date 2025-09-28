@@ -105,3 +105,11 @@ This will:
 ## AWS S3 Setup (Cloud Service)
 
 * Please refer to [AWS S3 Setup](hydf_aws_rekognition/Readme.md)
+
+## Run
+
+* Start the server
+  ```bash
+  python app.py
+  ```
+* Open a web browser and go to the address shown in the terminal (default: http://localhost:5000)
