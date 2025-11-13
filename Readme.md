@@ -1,5 +1,8 @@
 # Hybrid Defend
 
+## Project Demo
+![Project Demo](video_demo.gif)
+
 ## Environmental Setup
 
 **Install Anaconda**
